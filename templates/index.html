@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Makeba - YouTube Video Downloader</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="text-center py-5">
+            <h1 class="display-4 mb-3">
+                <i class="fas fa-download me-3"></i>
+                Makeba
+            </h1>
+            <p class="lead text-muted">Privacy-focused YouTube video downloader</p>
+            <div class="privacy-notice">
+                <small class="text-success">
+                    <i class="fas fa-shield-alt me-1"></i>
+                    No history saved • No tracking • Complete privacy
+                </small>
+            </div>
+        </header>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Main Download Form -->
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card shadow-lg">
+                    <div class="card-body p-4">
+                        <form id="downloadForm" method="POST" action="{{ url_for('download_video') }}">
+                            <div class="mb-4">
+                                <label for="url" class="form-label">
+                                    <i class="fab fa-youtube me-2"></i>YouTube URL
+                                </label>
+                                <div class="input-group">
+                                    <input type="url" 
+                                           class="form-control form-control-lg" 
+                                           id="url" 
+                                           name="url" 
+                                           placeholder="https://www.youtube.com/watch?v=..." 
+                                           required>
+                                    <button type="button" 
+                                            class="btn btn-outline-secondary" 
+                                            id="fetchInfo"
+                                            title="Get video info">
+                                        <i class="fas fa-info-circle"></i>
+                                    </button>
+                                </div>
+                                <div class="form-text">
+                                    Supports regular YouTube videos and YouTube Shorts
+                                </div>
+                            </div>
+
+                            <!-- Video Info Display -->
+                            <div id="videoInfo" class="mb-4" style="display: none;">
+                                <div class="card bg-dark">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <img id="videoThumbnail" src="" alt="Video thumbnail" class="img-fluid rounded">
+                                            </div>
+                                            <div class="col-md-8">
+                                                <h5 id="videoTitle" class="card-title"></h5>
+                                                <p class="card-text">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-user me-1"></i>
+                                                        <span id="videoUploader"></span>
+                                                        <br>
+                                                        <i class="fas fa-clock me-1"></i>
+                                                        <span id="videoDuration"></span>
+                                                        <br>
+                                                        <i class="fas fa-eye me-1"></i>
+                                                        <span id="videoViews"></span> views
+                                                    </small>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="quality" class="form-label">
+                                    <i class="fas fa-cog me-2"></i>Video Quality
+                                </label>
+                                <select class="form-select form-select-lg" id="quality" name="quality">
+                                    <option value="720p">720p HD (Recommended)</option>
+                                    <option value="480p">480p Standard</option>
+                                    <option value="360p">360p Mobile</option>
+                                </select>
+                                <div class="form-text">
+                                    Higher quality = larger file size
+                                </div>
+                            </div>
+
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg" id="downloadBtn">
+                                    <i class="fas fa-download me-2"></i>
+                                    Download Video
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div class="row mt-5">
+            <div class="col-md-4 text-center mb-4">
+                <div class="feature-icon">
+                    <i class="fas fa-shield-alt fa-3x text-success mb-3"></i>
+                </div>
+                <h5>Privacy First</h5>
+                <p class="text-muted">No user data stored, no tracking, no history saved</p>
+            </div>
+            <div class="col-md-4 text-center mb-4">
+                <div class="feature-icon">
+                    <i class="fas fa-film fa-3x text-primary mb-3"></i>
+                </div>
+                <h5>Multiple Qualities</h5>
+                <p class="text-muted">Choose from 360p, 480p, or 720p video quality</p>
+            </div>
+            <div class="col-md-4 text-center mb-4">
+                <div class="feature-icon">
+                    <i class="fas fa-mobile-alt fa-3x text-info mb-3"></i>
+                </div>
+                <h5>Works Everywhere</h5>
+                <p class="text-muted">Compatible with YouTube videos and Shorts</p>
+            </div>
+        </div>
+
+        <!-- Loading Modal -->
+        <div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-body text-center p-4">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <h5>Processing your request...</h5>
+                        <p class="text-muted mb-0">Please wait while we prepare your download</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center py-4 mt-5">
+        <div class="container">
+            <small class="text-muted">
+                Made with <i class="fas fa-heart text-danger"></i> for privacy-conscious users
+            </small>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
